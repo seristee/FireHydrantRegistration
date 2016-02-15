@@ -68,6 +68,24 @@
                 android:id="@+id/commentsTxt"
                 android:layout_column="1" />
         </TableRow>
+
+        <TableRow android:layout_height="wrap_content">
+            <Button
+                android:id="@+id/photo_button"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="Photo" />
+
+            <ImageView
+                android:layout_width="wrap_content"
+                android:layout_height="100dp"
+                android:id="@+id/imageView"
+                android:layout_column="1"
+                android:contentDescription="@string/currentphoto" />
+
+        </TableRow>
+
         <TableRow>
             <TextView
                 android:layout_width="wrap_content"
@@ -97,7 +115,6 @@
                 android:enabled="false" />
         </TableRow>
     </TableLayout>
-
     <LinearLayout
         android:layout_marginTop="50dp"
         android:layout_width="fill_parent"

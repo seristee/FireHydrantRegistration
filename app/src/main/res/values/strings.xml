@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">Fire Hydrant Registration</string>
+    <string name="save_error">There was an error saving your hydrant!</string>
+    <string name="save_success">Your hydrant has been saved successfully!</string>
+    <string name="currentphoto">currentPhoto</string>
 </resources>

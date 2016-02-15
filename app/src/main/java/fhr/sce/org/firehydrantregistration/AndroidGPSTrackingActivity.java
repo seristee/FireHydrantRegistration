@@ -1,18 +1,28 @@
 package fhr.sce.org.firehydrantregistration;
 
 import android.app.ProgressDialog;
+import android.content.Intent;
+import android.graphics.Bitmap;
+import android.net.Uri;
+import android.os.AsyncTask;
 import android.os.Bundle;
+import android.os.Environment;
 import android.os.StrictMode;
+import android.provider.MediaStore;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import org.json.JSONObject;
 
-import java.net.MalformedURLException;
-import java.net.URL;
+import java.io.File;
+import java.net.URI;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
 
 /**
@@ -21,16 +31,22 @@ import java.util.HashMap;
 public class AndroidGPSTrackingActivity extends AppCompatActivity {
     Button btnShowLocation;
     Button btnSubmitHydrant;
-    private ProgressDialog pDialog;
+    Button btnSavePhoto;
 
-    private EditText hydrantSerial,hydrantType,hydrantCondition,hydrantComments,hydrantLattitude,hydrantLongitude;
+
+    EditText hydrantSerial;
+    EditText hydrantType;
+    EditText hydrantCondition;
+    EditText hydrantComments;
+    EditText hydrantLatitude;
+    EditText hydrantLongitude;
 
     // GPSTracker class
     GPSTracker gps;
 
-    final static String saveHydrantUrl = "http://208.94.176.125:81/fhydrants/insert_hydrant.php";
+    private static final int CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE = 1888;
+    private ImageView imageView;
 
-    JSONParser jsonParser = new JSONParser();
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -42,13 +58,15 @@ public class AndroidGPSTrackingActivity extends AppCompatActivity {
 
         btnShowLocation = (Button) findViewById(R.id.btnShowLocation);
         btnSubmitHydrant = (Button) findViewById(R.id.btnSubmitHydrant);
+        btnSavePhoto = (Button) findViewById(R.id.photo_button);
+
 
         //values
         hydrantSerial = (EditText) findViewById(R.id.serialTxt);
         hydrantType =  (EditText) findViewById(R.id.typeTxt);
         hydrantCondition = (EditText) findViewById(R.id.conditionTxt);
         hydrantComments = (EditText) findViewById(R.id.commentsTxt);
-        hydrantLattitude = (EditText) findViewById(R.id.txt_latitude);
+        hydrantLatitude = (EditText) findViewById(R.id.txt_latitude);
         hydrantLongitude = (EditText) findViewById(R.id.txt_longitude);
 
 
@@ -87,30 +105,105 @@ public class AndroidGPSTrackingActivity extends AppCompatActivity {
         btnSubmitHydrant.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                //values
                 String serial = hydrantSerial.getText().toString();
                 String type = hydrantType.getText().toString();
                 String condition = hydrantCondition.getText().toString();
                 String comments = hydrantComments.getText().toString();
-                String lattitude = hydrantLattitude.getText().toString();
+                String latitude = hydrantLatitude.getText().toString();
                 String longitude = hydrantLongitude.getText().toString();
 
-                HashMap<String, String> params = new HashMap<String, String>();
-                params.put("hydrant_serial",serial);
-                params.put("hydrant_type",type);
-                params.put("hydrant_condition",condition);
-                params.put("hydrant_comments",comments);
-                params.put("hydrant_lattitude",lattitude);
-                params.put("hydrant_longitude",longitude);
-                System.err.println("PARAMS =>> " + params.toString());
+                new SaveNewHydrant().execute(serial,type,condition,comments,latitude,longitude);
 
-                try {
-                    JSONObject jsonObject = jsonParser.makeHttpRequest(saveHydrantUrl,"POST",params);
-                } catch (Exception err){
-                    err.printStackTrace();
-                }
+                //Toast.makeText(getApplicationContext(),getString(R.string.save_success), Toast.LENGTH_LONG).show();
+            }
+        });
+
+        btnSavePhoto.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                Intent cameraIntent = new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+                startActivityForResult(cameraIntent, CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE);
             }
         });
     }
 
 
+    class SaveNewHydrant extends AsyncTask<String,String,String> {
+
+        private ProgressDialog pDialog;
+        private final static String saveHydrantUrl = "INSERT ADDESS FOR PHP SCRIPT HERE";
+        private static final String TAG_SUCCESS = "success";
+        String answer  = null;
+
+        HashMap<String, String> params;
+
+        @Override
+        protected void onPreExecute() {
+            super.onPreExecute();
+            pDialog = new ProgressDialog(AndroidGPSTrackingActivity.this);
+            pDialog.setTitle("Loading...");
+            pDialog.setMessage("Saving New Hydrant...");
+            pDialog.setIndeterminate(false);
+            pDialog.setCancelable(true);
+            pDialog.show();
+        }
+
+        @Override
+        protected String doInBackground(String... argo) {
+
+            String getSerial = argo[0];
+            String getType = argo[1];
+            String getCondition = argo[2];
+            String getComments = argo[3];
+            String getLatitude = argo[4];
+            String getLongitude = argo[5];
+
+            params = new HashMap<>();
+            params.put("hydrant_serial",getSerial);
+            params.put("hydrant_type",getType);
+            params.put("hydrant_condition",getCondition);
+            params.put("hydrant_comments",getComments);
+            params.put("hydrant_latitude",getLatitude);
+            params.put("hydrant_longitude",getLongitude);
+
+            System.err.println("OBJECTS =>> " + getSerial + " => " + getType + " => " + getCondition + " => " + getComments + " => " + getLatitude + " => " + getLongitude);
+
+            JSONParser jsonParser = new JSONParser();
+            JSONObject jsonObject= jsonParser.makeHttpRequest(saveHydrantUrl,"POST",params);
+
+            Log.d("Create Response", jsonObject.toString());
+            try {
+                int success = jsonObject.getInt(TAG_SUCCESS);
+
+                if(success == 1){
+                    //Toast.makeText(getApplicationContext(),getString(R.string.save_success), Toast.LENGTH_LONG).show();
+                    answer =  "true";
+                } else {
+                    //Toast.makeText(getApplicationContext(),getString(R.string.save_error), Toast.LENGTH_LONG).show();
+                    answer =  "false";
+                }
+            } catch (Exception ex){
+                ex.printStackTrace();
+            }
+            return answer;
+        }
+
+        @Override
+        protected void onPostExecute(String s) {
+            pDialog.dismiss();
+        }
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        imageView = (ImageView) findViewById(R.id.imageView);
+        if(requestCode == CAPTURE_IMAGE_ACTIVITY_REQUEST_CODE && resultCode == RESULT_OK){
+            Bitmap photo = (Bitmap) data.getExtras().get("data");
+            imageView.setImageBitmap(photo);
+
+            System.err.println(data.getExtras().get("data"));
+        }
+        imageView.setVisibility(View.VISIBLE);
+    }
 }
